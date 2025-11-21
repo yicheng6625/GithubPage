@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>跳轉選單</title>
+    <style>
+        /* 簡單樣式 */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; margin: 40px; color:#222; background:#f7f9fc; }
+        .container{ max-width:720px; margin:0 auto; background:#fff; padding:24px; border-radius:8px; box-shadow:0 6px 18px rgba(10,20,40,0.06); }
+        h1{ margin:0 0 12px; font-size:20px; }
+        p.small{ color:#666; margin:0 0 18px; }
+        ul.menu{ list-style:none; padding:0; margin:0 0 18px; }
+        ul.menu li{ margin:8px 0; }
+        a.card{ display:block; padding:12px 14px; background:#f1f7ff; border-radius:6px; color:#0366d6; text-decoration:none; border:1px solid rgba(3,102,214,0.08); }
+        a.card:hover{ background:#e8f1ff; }
+        .controls{ display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+        .controls input[type="number"]{ width:80px; padding:6px; }
+        .note{ font-size:13px; color:#666; }
+        footer{ margin-top:18px; color:#999; font-size:13px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>站內跳轉選單</h1>
+
+        <!-- 操作區：可設定是否自動跳轉及延遲秒數 -->
+        <!-- <div class="controls">
+            <label><input id="autoRedirect" type="checkbox" /> 自動跳轉到第一個連結</label>
+            <label style="margin-left:auto">延遲 <input id="delaySec" type="number" value="3" min="0" /> 秒</label>
+        </div> -->
+
+        <!-- 連結列表（由下方 script 產生） -->
+        <ul id="menu" class="menu"></ul>
+
+        <footer>進入時間：<!-- 會由 JS 填入 --></footer>
+    </div>
+
+    <script>
+        // ----- 設定區（請編輯這裡的資料夾清單） -----
+        // 請改為你專案目錄下的子資料夾名稱（不含斜線），此檔案會嘗試導向 ./<folder>/index.html
+        // 例：var folders = ["0_Website","1_Lijie","8_Bella"];
+        var folders = [
+            "TestImageDownload",
+            "GenPassword"
+        ];
+        // ---------------------------------------------
+
+        // 建立連結清單
+        var menu = document.getElementById('menu');
+        if (folders.length === 0) {
+            var li = document.createElement('li');
+            li.textContent = "目前 folders 陣列為空，請編輯本檔案以加入子資料夾名稱。";
+            menu.appendChild(li);
+        } else {
+            folders.forEach(function(name){
+                var li = document.createElement('li');
+                var a = document.createElement('a');
+                // 相對連結到同一層的子資料夾 index.html
+                a.href = "./" + encodeURIComponent(name) + "/index.html";
+                a.className = "card";
+                a.textContent = name;
+                // 若點擊後找不到頁面，開發中會看到 404，可依需求改為相對路徑或絕對路徑
+                li.appendChild(a);
+                menu.appendChild(li);
+            });
+        }
+
+        // footer 顯示進入時間
+        document.querySelector('footer').textContent = '進入時間：' + new Date().toLocaleString();
+
+        // // 自動跳轉邏輯
+        // var autoCheckbox = document.getElementById('autoRedirect');
+        // var delayInput = document.getElementById('delaySec');
+        // // 保留使用者選擇（session）
+        // autoCheckbox.checked = sessionStorage.getItem('autoRedirect') === '1';
+        // delayInput.value = sessionStorage.getItem('delaySec') || delayInput.value;
+
+        // autoCheckbox.addEventListener('change', function(){
+        //     sessionStorage.setItem('autoRedirect', this.checked ? '1' : '0');
+        // });
+        // delayInput.addEventListener('change', function(){
+        //     sessionStorage.setItem('delaySec', this.value);
+        // });
+
+        // // 如果啟用自動跳轉並有至少一個連結，則在指定延遲後跳轉
+        // function tryAutoRedirect(){
+        //     if (!autoCheckbox.checked) return;
+        //     var firstLink = menu.querySelector('a');
+        //     if (!firstLink) return;
+        //     var sec = parseFloat(delayInput.value) || 0;
+        //     // 小於等於0秒則立即跳轉
+        //     if (sec <= 0) {
+        //         window.location.href = firstLink.href;
+        //     } else {
+        //         setTimeout(function(){
+        //             window.location.href = firstLink.href;
+        //         }, Math.round(sec * 1000));
+        //     }
+        // }
+
+        // 頁面載入後嘗試自動跳轉
+        // window.addEventListener('load', tryAutoRedirect);
+    </script>
+</body>
+</html>
