@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pre-Read 圖片</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        
+        .canvas-container {
+            margin-bottom: 20px;
+        }
+        
+        canvas {
+            border: 2px solid #333;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .control-item input {
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            min-width: 120px;
+        }
+
+        .slider-group {
+            min-width: 220px;
+        }
+
+        .slider-group input[type="range"] {
+            min-width: 200px;
+        }
+
+        .custom-size {
+            display: none;
+        }
+
+        .custom-size.visible {
+            display: flex;
+        }
+
+        .file-info {
+            font-size: 14px;
+            margin-bottom: 16px;
+            text-align: center;
+            color: #333;
+        }
+        
+        .download-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        
+        .download-btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .info {
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="canvas-container">
+        <canvas id="prereadCanvas" width="375" height="280"></canvas>
+    </div>
+
+    <div class="controls">
+        <label class="control-item">
+            長度 (px)
+            <input type="number" id="widthInput" min="50" max="2000" value="375">
+        </label>
+        <label class="control-item">
+            寬度 (px)
+            <input type="number" id="heightInput" min="50" max="2000" value="280">
+        </label>
+        <label class="control-item">
+            顯示文字
+            <input type="text" id="textInput" maxlength="50" value="Pre-Read">
+        </label>
+        <label class="control-item">
+            背景顏色
+            <input type="color" id="bgColorInput" value="#000000">
+        </label>
+        <label class="control-item slider-group">
+            解析度倍率：<span id="resolutionValue">1x</span>
+            <input type="range" id="resolutionRange" min="1" max="4" value="1">
+        </label>
+        <label class="control-item custom-size" id="customSizeWrapper">
+            自訂檔案大小 (GB)
+            <input type="number" id="customSizeInput" min="0.1" max="1" step="0.1" placeholder="輸入例如 0.2">
+        </label>
+    </div>
+
+    <div class="file-info" id="fileInfo">預估檔案大小：--</div>
+    
+    <button class="download-btn" onclick="downloadImage()">下載圖片 (PNG)</button>
+    
+    <div class="info">
+        畫布尺寸與輸出資訊會根據輸入動態更新
+    </div>
+
+    <script>
+        // 初始化 DOM 元素
+        const canvas = document.getElementById('prereadCanvas');
+        const ctx = canvas.getContext('2d');
+        const widthInput = document.getElementById('widthInput');
+        const heightInput = document.getElementById('heightInput');
+        const textInput = document.getElementById('textInput');
+        const bgColorInput = document.getElementById('bgColorInput');
+        const resolutionRange = document.getElementById('resolutionRange');
+        const resolutionValue = document.getElementById('resolutionValue');
+        const fileInfo = document.getElementById('fileInfo');
+        const customSizeWrapper = document.getElementById('customSizeWrapper');
+        const customSizeInput = document.getElementById('customSizeInput');
+        const infoBlock = document.querySelector('.info');
+        const maxResolutionStep = parseInt(resolutionRange.max, 10);
+
+        // 取得目前輸入的寬高設定
+        function getBaseDimensions() {
+            return {
+                width: parseInt(widthInput.value, 10) || 375,
+                height: parseInt(heightInput.value, 10) || 280
+            };
+        }
+
+        // 依據輸入值重新繪製圖片
+        function drawImage() {
+            const { width, height } = getBaseDimensions();
+            const displayText = textInput.value.trim() || 'Pre-Read';
+            const bgColor = bgColorInput.value || '#000000';
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // 設置背景顏色
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, width, height);
+            
+            // 設置白色文字
+            ctx.fillStyle = '#ffffff';
+            const maxFontByHeight = Math.max(height - 20, 12);
+            ctx.font = `bold ${maxFontByHeight}px Arial`;
+            const textMetrics = ctx.measureText(displayText);
+            const availableWidth = Math.max(width - 20, 20);
+            if (textMetrics.width > availableWidth && textMetrics.width > 0) {
+                const scale = availableWidth / textMetrics.width;
+                const adjustedFontSize = Math.max(Math.floor(maxFontByHeight * scale), 12);
+                ctx.font = `bold ${adjustedFontSize}px Arial`;
+            }
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // 繪製輸入文字在中央
+            ctx.fillText(displayText, width / 2, height / 2);
+
+            updateFileInfo();
+        }
+
+        // 下載圖片功能（含解析度與自訂大小）
+        function downloadImage() {
+            const { width, height } = getBaseDimensions();
+            const scale = parseInt(resolutionRange.value, 10) || 1;
+            const scaledWidth = width * scale;
+            const scaledHeight = height * scale;
+            const offscreenCanvas = document.createElement('canvas');
+            offscreenCanvas.width = scaledWidth;
+            offscreenCanvas.height = scaledHeight;
+            const offscreenCtx = offscreenCanvas.getContext('2d');
+            offscreenCtx.imageSmoothingQuality = 'high';
+            offscreenCtx.drawImage(canvas, 0, 0, scaledWidth, scaledHeight);
+            const fileName = `pre-read-${scaledWidth}x${scaledHeight}.png`;
+
+            offscreenCanvas.toBlob(async blob => {
+                if (!blob) return;
+                const finalBlob = await buildFinalBlob(blob);
+                triggerDownload(finalBlob, fileName);
+            }, 'image/png');
+        }
+
+        // 建立最後要下載的 Blob，若需要填充則填滿
+        async function buildFinalBlob(baseBlob) {
+            const scale = parseInt(resolutionRange.value, 10) || 1;
+            const customGB = parseFloat(customSizeInput.value);
+            const needCustomSize = scale === maxResolutionStep && !isNaN(customGB) && customGB > 0;
+
+            if (!needCustomSize) {
+                return baseBlob;
+            }
+
+            const targetBytes = Math.floor(customGB * 1024 * 1024 * 1024);
+            if (targetBytes <= baseBlob.size) {
+                return baseBlob;
+            }
+
+            const paddingBytes = targetBytes - baseBlob.size;
+            const paddedBlob = new Blob([baseBlob, generatePaddingBlob(paddingBytes)], { type: baseBlob.type });
+            return paddedBlob;
+        }
+
+        // 產生填充資料，使檔案符合使用者輸入的 GB 大小
+        function generatePaddingBlob(size) {
+            const chunkSize = 1024 * 1024; // 以 1MB 為單位填充
+            const chunks = [];
+            let remaining = size;
+            const zeroChunk = new Uint8Array(chunkSize);
+
+            while (remaining > 0) {
+                if (remaining >= chunkSize) {
+                    chunks.push(zeroChunk);
+                    remaining -= chunkSize;
+                } else {
+                    chunks.push(new Uint8Array(remaining));
+                    remaining = 0;
+                }
+            }
+
+            return new Blob(chunks);
+        }
+
+        // 執行實際下載
+        function triggerDownload(blob, fileName) {
+            const link = document.createElement('a');
+            const objectUrl = URL.createObjectURL(blob);
+            link.href = objectUrl;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 500);
+        }
+
+        // 動態更新解析度、預估檔案大小等資訊
+        function updateFileInfo() {
+            const { width, height } = getBaseDimensions();
+            const scale = parseInt(resolutionRange.value, 10) || 1;
+            const scaledWidth = width * scale;
+            const scaledHeight = height * scale;
+            const isMaxScale = scale === maxResolutionStep;
+            resolutionValue.textContent = `${scale}x`;
+            customSizeWrapper.classList.toggle('visible', isMaxScale);
+            customSizeInput.disabled = !isMaxScale;
+
+            let estimatedBytes = scaledWidth * scaledHeight * 4;
+            let sizeText = formatBytes(estimatedBytes);
+
+            if (isMaxScale) {
+                const customGB = parseFloat(customSizeInput.value);
+                if (!isNaN(customGB) && customGB > 0) {
+                    const customBytes = customGB * 1024 * 1024 * 1024;
+                    sizeText = `${customGB} GB（約 ${formatBytes(customBytes)}）`;
+                }
+            }
+
+            fileInfo.textContent = `輸出尺寸：${scaledWidth} x ${scaledHeight}px｜預估檔案大小：${sizeText}`;
+            infoBlock.innerHTML = `畫布尺寸：${width} x ${height}px<br>輸出解析度：${scaledWidth} x ${scaledHeight}px`;
+        }
+
+        // 將位元組數轉成人類易讀格式
+        function formatBytes(bytes) {
+            if (!bytes || bytes <= 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+            const value = bytes / Math.pow(1024, index);
+            return `${value.toFixed(2)} ${units[index]}`;
+        }
+        
+        // 監聽輸入欄位，在使用者輸入時即時更新圖片
+        [widthInput, heightInput, textInput, bgColorInput].forEach(input => {
+            input.addEventListener('input', drawImage);
+        });
+
+        resolutionRange.addEventListener('input', updateFileInfo);
+        customSizeInput.addEventListener('input', updateFileInfo);
+        
+        // 頁面載入後繪製圖片
+        window.onload = function() {
+            drawImage();
+        };
+    </script>
+</body>
+</html>

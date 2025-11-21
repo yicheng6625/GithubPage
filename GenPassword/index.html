@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>密碼產生器</title>
+    <meta name="description" content="可自訂長度、大小寫、數字、符號, 一次產生10組密碼並支援一鍵複製的純前端工具。" />
+    <style>
+      /*
+       * 簡單的純CSS樣式，避免外部依賴，適合GitHub Pages靜態託管
+       * － 主要容器、控制區、結果清單、按鈕樣式
+       */
+      :root {
+        --bg: #0f172a;        /* 背景色 */
+        --panel: #111827;     /* 面板底色 */
+        --text: #e5e7eb;      /* 主要文字 */
+        --muted: #94a3b8;     /* 輔助文字 */
+        --primary: #22c55e;   /* 主要強調色 */
+        --danger: #ef4444;    /* 錯誤色 */
+        --border: #1f2937;    /* 邊框色 */
+        --accent: #64748b;    /* 次要強調 */
+      }
+
+      html, body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
+        background: linear-gradient(180deg, #0b1220, var(--bg));
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px 16px 48px;
+      }
+
+      header h1 {
+        margin: 8px 0 6px;
+        font-size: 28px;
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .panel {
+        margin-top: 20px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px 18px;
+        align-items: end;
+      }
+
+      .field label {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .inline {
+        display: flex;
+        gap: 10px 16px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      input[type="number"], .fake-input {
+        width: 100%;
+        box-sizing: border-box;
+        background: #0b1220;
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 14px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 14px;
+        background: var(--primary);
+        border: 1px solid #16a34a;
+        color: #062e12;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform .02s ease-in-out, filter .2s;
+        user-select: none;
+      }
+
+      .btn:hover { filter: brightness(1.02); }
+      .btn:active { transform: translateY(1px); }
+
+      .btn.secondary {
+        background: #1f2937;
+        color: var(--text);
+        border-color: var(--border);
+      }
+
+      .error {
+        color: var(--danger);
+        font-size: 13px;
+        margin-top: 6px;
+      }
+
+      .results {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .pwd {
+        width: 100%;
+        background: #0b1220;
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 14px;
+      }
+
+      .copy-btn {
+        white-space: nowrap;
+      }
+
+      .hint {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      footer {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .chip {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: #0b1220;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      @media (min-width: 720px) {
+        header h1 { font-size: 32px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>密碼產生器</h1>
+      </header>
+
+      <section class="panel" aria-labelledby="settings-title">
+        <h2 id="settings-title" style="position:absolute;left:-9999px;">設定</h2>
+        <div class="controls">
+          <div class="field">
+            <label for="length">密碼長度 (4 ~ 64) </label>
+            <input id="length" type="number" min="4" max="64" value="16" inputmode="numeric" aria-describedby="length-hint" />
+            <div id="length-hint" class="hint">建議 12 以上以提升強度</div>
+          </div>
+
+          <div class="field">
+            <label>字元類型</label>
+            <div class="inline" role="group" aria-label="字元類型">
+              <label><input id="lower" type="checkbox" checked /> 小寫 a-z</label>
+              <label><input id="upper" type="checkbox" checked /> 大寫 A-Z</label>
+              <label><input id="digit" type="checkbox" checked /> 數字 0-9</label>
+              <label><input id="symbol" type="checkbox" checked /> 符號 !@#…</label>
+            </div>
+            <div class="hint">若無勾選任何類型，將無法產生密碼。</div>
+          </div>
+
+          <div class="field">
+            <label>輸出組數 (固定)</label>
+            <div class="fake-input">10</div>
+          </div>
+
+          <div class="field">
+            <button id="generate" class="btn" aria-label="產生 10 組密碼">⚡ 產生密碼</button>
+            <div id="error" class="error" role="alert" style="display:none"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="result-title">
+        <h2 id="result-title" style="position:absolute;left:-9999px;">結果</h2>
+        <div id="results" class="results" aria-live="polite" aria-busy="false">
+          <!-- 產生結果將插入於此 -->
+        </div>
+      </section>
+
+      <footer>
+        <p>本頁面不會上傳或儲存任何資料，所有運算於瀏覽器本地端完成。</p>
+        <p>如有疑慮或建議請洽 yicheng6625@gmail.com 謝謝。</p>
+      </footer>
+    </div>
+
+    <script>
+      // ========= 密碼產生器邏輯（純前端，適用 GitHub Pages） =========
+      // 使用 window.crypto.getRandomValues 以獲得密碼學等級的隨機性
+      // 並確保所勾選的每一類字元類型至少出現一次，提高密碼品質。
+
+      /**
+       * 取得安全隨機整數（0 <= n < max）
+       * 使用 crypto.getRandomValues 以避免偏差與 Math.random 的弱隨機性。
+       */
+      function secureRandInt(max) {
+        if (max <= 0) return 0;
+        // 以 32 位元整數取值，並以最大值排除偏差
+        const array = new Uint32Array(1);
+        const limit = Math.floor(0x100000000 / max) * max; // 最大安全取樣範圍
+        let x;
+        do {
+          window.crypto.getRandomValues(array);
+          x = array[0];
+        } while (x >= limit);
+        return x % max;
+      }
+
+      /**
+       * 將陣列就地洗牌（Fisher-Yates），亦使用安全隨機源。
+       */
+      function shuffleInPlace(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = secureRandInt(i + 1);
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      // 各類字元集合（可視需求調整）
+      const SETS = {
+        lower: 'abcdefghijklmnopqrstuvwxyz',
+        upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        digit: '0123456789',
+        // 避免過於冷門或導致URL/Markdown衝突的字元，取常見符號集
+        symbol: '!@#$%&*()-_=+[]{};:,.?/\\',
+      };
+
+      /**
+       * 產生單一密碼，至少包含每一被勾選的類型一次。
+       * @param {number} length 密碼長度（4~64）
+       * @param {object} opts   { lower, upper, digit, symbol }
+       */
+      function generateOnePassword(length, opts) {
+        const activeSets = [];
+        const poolParts = [];
+
+        // 根據勾選加入各字元集
+        for (const key of ['lower', 'upper', 'digit', 'symbol']) {
+          if (opts[key]) {
+            activeSets.push(SETS[key]);
+            poolParts.push(SETS[key]);
+          }
+        }
+
+        // 無可用集合時回傳空字串，外層會顯示錯誤
+        if (activeSets.length === 0) return '';
+
+        const pool = poolParts.join('');
+        const chars = [];
+
+        // 先確保每一類至少一個
+        for (const set of activeSets) {
+          const idx = secureRandInt(set.length);
+          chars.push(set[idx]);
+        }
+
+        // 補足剩餘長度
+        while (chars.length < length) {
+          const idx = secureRandInt(pool.length);
+          chars.push(pool[idx]);
+        }
+
+        // 打亂避免固定順序暴露模式
+        shuffleInPlace(chars);
+        return chars.join('');
+      }
+
+      /**
+       * 嘗試以 Clipboard API 複製文字，若失敗則退回舊方法。
+       */
+      async function copyText(text, inputEl, btnEl) {
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            // 後備方案：選取輸入框並執行 copy 指令
+            inputEl?.select();
+            document.execCommand('copy');
+            inputEl?.blur();
+          }
+          // 顯示短暫提示
+          const prev = btnEl.textContent;
+          btnEl.textContent = '已複製 ✓';
+          btnEl.disabled = true;
+          setTimeout(() => {
+            btnEl.textContent = prev;
+            btnEl.disabled = false;
+          }, 900);
+        } catch (e) {
+          const prev = btnEl.textContent;
+          btnEl.textContent = '複製失敗';
+          btnEl.disabled = true;
+          setTimeout(() => {
+            btnEl.textContent = prev;
+            btnEl.disabled = false;
+          }, 1200);
+        }
+      }
+
+      // 綁定DOM元素
+      const el = {
+        length: document.getElementById('length'),
+        lower: document.getElementById('lower'),
+        upper: document.getElementById('upper'),
+        digit: document.getElementById('digit'),
+        symbol: document.getElementById('symbol'),
+        generate: document.getElementById('generate'),
+        results: document.getElementById('results'),
+        error: document.getElementById('error'),
+      };
+
+      // 初始渲染：產生一次
+      window.addEventListener('DOMContentLoaded', () => {
+        handleGenerate();
+      });
+
+      // 事件：點擊產生
+      el.generate.addEventListener('click', handleGenerate);
+
+      /**
+       * 產生 10 組密碼並渲染到畫面
+       */
+      function handleGenerate() {
+        const length = Math.max(4, Math.min(64, parseInt(el.length.value || '16', 10)));
+        const opts = {
+          lower: el.lower.checked,
+          upper: el.upper.checked,
+          digit: el.digit.checked,
+          symbol: el.symbol.checked,
+        };
+
+        // 檢查至少勾選一種類型
+        if (!opts.lower && !opts.upper && !opts.digit && !opts.symbol) {
+          el.error.style.display = '';
+          el.error.textContent = '請至少勾選一種字元類型';
+          return;
+        }
+        el.error.style.display = 'none';
+        el.error.textContent = '';
+
+        // 標示 busy
+        el.results.setAttribute('aria-busy', 'true');
+        const frag = document.createDocumentFragment();
+        el.results.innerHTML = '';
+
+        // 固定產生 10 組
+        for (let i = 0; i < 10; i++) {
+          const pwd = generateOnePassword(length, opts);
+          const row = document.createElement('div');
+          row.className = 'row';
+
+          const input = document.createElement('input');
+          input.className = 'pwd';
+          input.value = pwd;
+          input.readOnly = true;
+          input.setAttribute('aria-label', `第 ${i+1} 組密碼`);
+
+          const btn = document.createElement('button');
+          btn.className = 'btn secondary copy-btn';
+          btn.type = 'button';
+          btn.textContent = '複製';
+          btn.setAttribute('aria-label', `複製第 ${i+1} 組密碼`);
+          btn.addEventListener('click', () => copyText(pwd, input, btn));
+
+          row.appendChild(input);
+          row.appendChild(btn);
+          frag.appendChild(row);
+        }
+
+        el.results.appendChild(frag);
+        el.results.setAttribute('aria-busy', 'false');
+      }
+    </script>
+  </body>
+</html>
+
