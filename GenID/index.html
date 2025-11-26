@@ -4,46 +4,147 @@
   <meta charset="UTF-8">
   <title>ROC ID Generator 台灣身份證字號產生器</title>
   <style>
-    body { font-family: "Noto Sans TC", sans-serif; max-width: 720px; margin: 24px auto; line-height: 1.6; }
-    h1 { margin-bottom: 8px; }
-    section { border: 1px solid #ddd; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
-    label { display: block; margin: 8px 0 4px; font-weight: 600; }
-    input[type="text"], select { width: 100%; padding: 8px; box-sizing: border-box; }
-    .row { display: flex; gap: 12px; }
-    .row > div { flex: 1; }
-    button { padding: 10px 16px; cursor: pointer; }
-    .result { margin-top: 8px; font-weight: 700; }
-    small { color: #666; }
+    :root {
+      --bg: linear-gradient(135deg, #e9f2ff 0%, #f7f9ff 100%);
+      --card: #fff;
+      --border: #e2e8f0;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-strong: #1d4ed8;
+      --accent: #0ea5e9;
+      --success: #16a34a;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Noto Sans TC", "Segoe UI", sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0; letter-spacing: 0.02em; }
+    .lead { color: var(--muted); margin: 0; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 20px;
+      border-radius: 14px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 30px rgba(37, 99, 235, 0.08);
+    }
+    h2 { margin: 0 0 12px; letter-spacing: 0.01em; }
+    label { display: block; margin: 8px 0 4px; font-weight: 700; }
+    input[type="text"], select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: #f8fafc;
+    }
+    input[type="text"]:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      outline: none;
+      background: #fff;
+    }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .row > div { flex: 1; min-width: 220px; }
+    .btn {
+      padding: 10px 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      transition: transform 0.08s ease, box-shadow 0.2s ease;
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+    }
+    .btn:active { transform: translateY(1px); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); }
+    .btn.secondary {
+      background: #e5e7eb;
+      color: #111827;
+      box-shadow: none;
+    }
+    .inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .result { margin-top: 10px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .pill { padding: 6px 10px; border-radius: 999px; font-size: 13px; }
+    .pill.success { background: rgba(22, 163, 74, 0.12); color: var(--success); }
+    .pill.danger { background: rgba(220, 38, 38, 0.12); color: var(--danger); }
+    small { color: var(--muted); }
+    .card-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin: 10px 0 0; }
+    .card-chip { padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--border); background: #f8fafc; color: var(--muted); }
   </style>
 </head>
 <body>
-  <h1>身分證字號產生器 / 驗證器</h1>
+  <div class="page">
+    <header>
+      <h1>身分證字號產生器 / 驗證器</h1>
+      <p class="lead">快速產生、驗證台灣身分證字號，並支援一鍵複製與貼上驗證。</p>
+    </header>
 
-  <section>
-    <h2>產生 Generate</h2>
-    <div class="row">
-      <div>
-        <label for="city">縣市</label>
-        <select id="city"></select>
+    <section>
+      <h2>產生 Generate</h2>
+      <div class="row">
+        <div>
+          <label for="city">縣市</label>
+          <select id="city"></select>
+        </div>
+        <div>
+          <label>性別</label>
+          <label><input type="radio" name="gender" value="1" checked> 男 (1)</label>
+          <label><input type="radio" name="gender" value="2"> 女 (2)</label>
+        </div>
       </div>
-      <div>
-        <label>性別</label>
-        <label><input type="radio" name="gender" value="1" checked> 男 (1)</label>
-        <label><input type="radio" name="gender" value="2"> 女 (2)</label>
+      <div class="inline" style="margin-top: 10px;">
+        <button id="btn-generate" class="btn" type="button">產生身分證字號</button>
+        <small>提示：隨機產生 7 碼流水號並自動計算檢查碼。</small>
       </div>
-    </div>
-    <button id="btn-generate">產生身分證字號</button>
-    <div class="result" id="gen-output">尚未產生</div>
-    <small>提示：隨機產生 7 碼流水號並自動計算檢查碼。</small>
-  </section>
+      <div class="result inline">
+        <span id="gen-output">尚未產生</span>
+        <button id="btn-copy" class="btn secondary" type="button">複製</button>
+      </div>
+    </section>
 
-  <section>
-    <h2>驗證 Verify</h2>
-    <label for="verify-input">輸入身分證字號</label>
-    <input id="verify-input" maxlength="10" placeholder="例如：A123456789">
-    <button id="btn-verify">檢查</button>
-    <div class="result" id="verify-output">尚未驗證</div>
-  </section>
+    <section>
+      <h2>驗證 Verify</h2>
+      <label for="verify-input">輸入身分證字號</label>
+      <div class="inline">
+        <input id="verify-input" maxlength="10" placeholder="例如：A123456789">
+        <button id="btn-paste" class="btn secondary" type="button">貼上</button>
+      </div>
+      <div class="inline" style="margin-top: 10px;">
+        <button id="btn-verify" class="btn" type="button">檢查</button>
+        <span id="verify-pill" class="pill" aria-live="polite">尚未驗證</span>
+      </div>
+      <div class="result" id="verify-output">等待輸入中...</div>
+    </section>
+
+    <section>
+      <h2>提示 Tips</h2>
+      <div class="card-list">
+        <div class="card-chip">產生後自動驗證，並可直接複製結果。</div>
+        <div class="card-chip">貼上後自動檢查，錯誤訊息會顯示在下方。</div>
+        <div class="card-chip">列表包含舊行政區代碼，與原始演算法一致。</div>
+      </div>
+    </section>
+  </div>
 
   <script>
     // DOM 物件先行抓取，方便共用檢查流程
@@ -51,6 +152,7 @@
     const verifyInput = document.getElementById("verify-input");
     const genOutput = document.getElementById("gen-output");
     const verifyOutput = document.getElementById("verify-output");
+    const verifyPill = document.getElementById("verify-pill");
 
     // 縣市代碼表：字母對應兩位數字與顯示名稱
     const cityList = [
@@ -93,7 +195,7 @@
     function calcChecksum(cityDigits, gender, serial) {
       const [d1, d2] = cityDigits.split("").map(Number); // 首兩位數字
       const midDigits = serial.split("").map(Number);
-      const weights = [8, 7, 6, 5, 4, 3, 2, 1]; // 性別之後的加權
+      const weights = [7, 6, 5, 4, 3, 2, 1]; // 性別之後七碼的加權 (對應 d2~d8)
       const sumCity = d1 + d2 * 9;
       const sumGender = Number(gender) * 8;
       const sumSerial = midDigits.reduce((acc, n, idx) => acc + n * weights[idx], 0);
@@ -127,8 +229,15 @@
     // 共用檢查流程，供產生後自動驗證與手動驗證按鈕呼叫
     function runVerification(id) {
       const result = verifyId(id);
-      verifyOutput.textContent = result.ok ? `✅ ${result.message}` : `❌ ${result.message}`;
+      setVerifyStatus(result.ok, result.message);
       return result;
+    }
+
+    // 封裝狀態顯示，搭配色塊提示
+    function setVerifyStatus(ok, message) {
+      verifyOutput.textContent = ok ? `✅ ${message}` : `❌ ${message}`;
+      verifyPill.textContent = ok ? "已通過" : "未通過";
+      verifyPill.className = ok ? "pill success" : "pill danger";
     }
 
     // 初始化下拉選單
@@ -153,6 +262,30 @@
     document.getElementById("btn-verify").addEventListener("click", () => {
       const input = verifyInput.value;
       runVerification(input);
+    });
+
+    // 事件：複製產生的 ID 到剪貼簿
+    document.getElementById("btn-copy").addEventListener("click", async () => {
+      const text = genOutput.textContent.trim();
+      if (!text || text === "尚未產生") return;
+      try {
+        await navigator.clipboard.writeText(text);
+        setVerifyStatus(true, "已複製"); // 中文提示
+      } catch (err) {
+        setVerifyStatus(false, "無法複製，請檢查權限");
+      }
+    });
+
+    // 事件：貼上剪貼簿內容到驗證欄位
+    document.getElementById("btn-paste").addEventListener("click", async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        verifyInput.value = text.trim();
+      } catch (err) {
+        setVerifyStatus(false, "無法貼上，請檢查權限");
+        return;
+      }
+      runVerification(verifyInput.value);
     });
   </script>
 </body>
