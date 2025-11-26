@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>ROC ID Generator 台灣身份證字號產生器</title>
+  <style>
+    body { font-family: "Noto Sans TC", sans-serif; max-width: 720px; margin: 24px auto; line-height: 1.6; }
+    h1 { margin-bottom: 8px; }
+    section { border: 1px solid #ddd; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+    label { display: block; margin: 8px 0 4px; font-weight: 600; }
+    input[type="text"], select { width: 100%; padding: 8px; box-sizing: border-box; }
+    .row { display: flex; gap: 12px; }
+    .row > div { flex: 1; }
+    button { padding: 10px 16px; cursor: pointer; }
+    .result { margin-top: 8px; font-weight: 700; }
+    small { color: #666; }
+  </style>
+</head>
+<body>
+  <h1>身分證字號產生器 / 驗證器</h1>
+
+  <section>
+    <h2>產生 Generate</h2>
+    <div class="row">
+      <div>
+        <label for="city">縣市</label>
+        <select id="city"></select>
+      </div>
+      <div>
+        <label>性別</label>
+        <label><input type="radio" name="gender" value="1" checked> 男 (1)</label>
+        <label><input type="radio" name="gender" value="2"> 女 (2)</label>
+      </div>
+    </div>
+    <button id="btn-generate">產生身分證字號</button>
+    <div class="result" id="gen-output">尚未產生</div>
+    <small>提示：隨機產生 7 碼流水號並自動計算檢查碼。</small>
+  </section>
+
+  <section>
+    <h2>驗證 Verify</h2>
+    <label for="verify-input">輸入身分證字號</label>
+    <input id="verify-input" maxlength="10" placeholder="例如：A123456789">
+    <button id="btn-verify">檢查</button>
+    <div class="result" id="verify-output">尚未驗證</div>
+  </section>
+
+  <script>
+    // DOM 物件先行抓取，方便共用檢查流程
+    const citySelect = document.getElementById("city");
+    const verifyInput = document.getElementById("verify-input");
+    const genOutput = document.getElementById("gen-output");
+    const verifyOutput = document.getElementById("verify-output");
+
+    // 縣市代碼表：字母對應兩位數字與顯示名稱
+    const cityList = [
+      { code: "A", digits: "10", name: "臺北市" },
+      { code: "B", digits: "11", name: "臺中市" },
+      { code: "C", digits: "12", name: "基隆市" },
+      { code: "D", digits: "13", name: "臺南市" },
+      { code: "E", digits: "14", name: "高雄市" },
+      { code: "F", digits: "15", name: "臺北縣" },
+      { code: "G", digits: "16", name: "宜蘭縣" },
+      { code: "H", digits: "17", name: "桃園縣" },
+      { code: "J", digits: "18", name: "新竹縣" },
+      { code: "K", digits: "19", name: "苗栗縣" },
+      { code: "L", digits: "20", name: "臺中縣" },
+      { code: "M", digits: "21", name: "南投縣" },
+      { code: "N", digits: "22", name: "彰化縣" },
+      { code: "P", digits: "23", name: "雲林縣" },
+      { code: "Q", digits: "24", name: "嘉義縣" },
+      { code: "R", digits: "25", name: "臺南縣" },
+      { code: "S", digits: "26", name: "高雄縣" },
+      { code: "T", digits: "27", name: "屏東縣" },
+      { code: "U", digits: "28", name: "花蓮縣" },
+      { code: "V", digits: "29", name: "臺東縣" },
+      { code: "X", digits: "30", name: "澎湖縣" },
+      { code: "Y", digits: "31", name: "陽明山" },
+      { code: "W", digits: "32", name: "金門縣" },
+      { code: "Z", digits: "33", name: "連江縣" },
+      { code: "I", digits: "34", name: "嘉義市" },
+      { code: "O", digits: "35", name: "新竹市" }
+    ];
+
+    // 生成 7 碼流水號（使用 crypto 以降低偏差）
+    function randomSerial() {
+      const buf = new Uint32Array(1);
+      crypto.getRandomValues(buf);
+      return (buf[0] % 10_000_000).toString().padStart(7, "0");
+    }
+
+    // 計算檢查碼：依照身分證公式加權後取 10 - (sum % 10) 再 mod 10
+    function calcChecksum(cityDigits, gender, serial) {
+      const [d1, d2] = cityDigits.split("").map(Number); // 首兩位數字
+      const midDigits = serial.split("").map(Number);
+      const weights = [8, 7, 6, 5, 4, 3, 2, 1]; // 性別之後的加權
+      const sumCity = d1 + d2 * 9;
+      const sumGender = Number(gender) * 8;
+      const sumSerial = midDigits.reduce((acc, n, idx) => acc + n * weights[idx], 0);
+      const mod = (sumCity + sumGender + sumSerial) % 10;
+      return (10 - mod) % 10;
+    }
+
+    // 產生完整身分證字號
+    function generateId(cityCode, gender) {
+      const city = cityList.find((c) => c.code === cityCode);
+      if (!city) throw new Error("未知縣市代碼");
+      const serial = randomSerial();
+      const checksum = calcChecksum(city.digits, gender, serial);
+      return `${city.code}${gender}${serial}${checksum}`;
+    }
+
+    // 驗證身分證字號
+    function verifyId(id) {
+      const normalized = id.trim().toUpperCase();
+      if (!/^[A-Z][12]\d{8}$/.test(normalized)) return { ok: false, message: "格式錯誤" };
+      const city = cityList.find((c) => c.code === normalized[0]);
+      if (!city) return { ok: false, message: "縣市代碼錯誤" };
+      const gender = normalized[1];
+      const serial = normalized.slice(2, 9);
+      const expected = calcChecksum(city.digits, gender, serial);
+      const given = Number(normalized[9]);
+      if (expected !== given) return { ok: false, message: "檢查碼不符" };
+      return { ok: true, message: "驗證通過" };
+    }
+
+    // 共用檢查流程，供產生後自動驗證與手動驗證按鈕呼叫
+    function runVerification(id) {
+      const result = verifyId(id);
+      verifyOutput.textContent = result.ok ? `✅ ${result.message}` : `❌ ${result.message}`;
+      return result;
+    }
+
+    // 初始化下拉選單
+    cityList.forEach((c) => {
+      const opt = document.createElement("option");
+      opt.value = c.code;
+      opt.textContent = `${c.name} (${c.code})`;
+      citySelect.appendChild(opt);
+    });
+
+    // 事件：產生
+    document.getElementById("btn-generate").addEventListener("click", () => {
+      const cityCode = citySelect.value;
+      const gender = document.querySelector('input[name="gender"]:checked').value;
+      const id = generateId(cityCode, gender);
+      genOutput.textContent = id;
+      verifyInput.value = id; // 產生後同步填入驗證欄位
+      runVerification(id);    // 自動檢查一次，保留手動按鈕可再次驗證
+    });
+
+    // 事件：驗證
+    document.getElementById("btn-verify").addEventListener("click", () => {
+      const input = verifyInput.value;
+      runVerification(input);
+    });
+  </script>
+</body>
+</html>
